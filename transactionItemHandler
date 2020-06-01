@@ -1,0 +1,57 @@
+public without sharing class transactionItemHandler {
+
+public static void selectTranItems(List<Transaction_Item__c> newList){    
+        try{        
+            Set<Id> transactionIds = new Set<Id>();
+            for (Transaction_Item__c transItem : newList) {            
+                transactionIds.add(transItem.Transaction__c);            
+            }  
+            
+            List<TransactionListWrapperClass> translistWrapperList = new List<TransactionListWrapperClass>();
+            for(Transaction__c trans : [SELECT Id,Transaction_Count__c,(SELECT Id,Item_Cost__c,Name from Transaction_Item__r) from transaction__c where Id IN :transactionIds]) {             
+                if(trans.Transaction_Item__r.size() > 0 && trans.Transaction_Item__r.size() + Limits.getDMLRows() < Limits.getLimitDMLRows()){
+                    if(trans.Transaction_Item__r.size() == trans.Transaction_Count__c){
+                        for (Transaction_Item__c ti: trans.Transaction_Item__r){                                  
+                            TransactionListWrapperClass tlw = new TransactionListWrapperClass();                                              
+                            TransactionListWrapperClass.Values tv = new TransactionListWrapperClass.Values();
+                            tv.ItemCost = Integer.valueOf(ti.Item_Cost__c);
+                            tv.ItemName = ti.Name;
+                            TransactionListWrapperClass.Keys tk = new TransactionListWrapperClass.Keys();
+                            tk.TransactionItemID = ti.Id; 
+                            tlw.values=tv;
+                            tlw.keys=tk;                                                
+                            translistWrapperList.add(tlw);
+                            System.debug('***TransactionList Payload' + JSON.serializePretty(tlw));
+                        }
+                    }  
+                }
+               
+                else if(trans.Transaction_Item__r.size() > 0 && trans.Transaction_Item__r.size() + Limits.getDMLRows() > Limits.getLimitDMLRows()){
+                    trans.addError('');
+                }
+            }      
+            if(translistWrapperList.size() > 0){
+                String TransactionItemString = JSON.serialize(translistWrapperList);                
+                if (!test.isRunningTest() && (Limits.getFutureCalls() <= Limits.getLimitFutureCalls())){
+                     System.debug('***before enque');
+                    ID queuejobID = System.enqueuejob(new transactionItemHelper(TransactionItemString,transactionIds));
+                    AsyncApexJob queuejobInfo = [SELECT Status,NumberOfErrors FROM AsyncApexJob WHERE Id=: queuejobID];
+                    system.debug('queuejobInfo' + queuejobInfo);
+                }
+                
+                else if(!test.isRunningTest() && (Limits.getFutureCalls() >= Limits.getLimitFutureCalls())){
+                    CalloutException e = new CalloutException();
+                    e.setMessage('');
+                    throw e;                    
+                }
+            }
+        }
+        
+        catch(System.Exception e){
+            System.debug('Error Occured ' + 'Error Message:' + e.getMessage() +
+                          'LineNumber: ' + e.getLineNumber() +
+                          'Stack: ' + e.getStackTraceString());                
+            throw e;
+        } 
+    }
+}
