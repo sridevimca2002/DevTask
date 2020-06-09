@@ -1,0 +1,4 @@
+public class declareConstants {
+	public static final Integer NUMBER_OF_TRANSACTIONS = 1;   
+    public static final Integer NUMBER_OF_TRAN_ITEMS_PER_TRAN = 5; 
+}

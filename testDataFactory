@@ -1,0 +1,40 @@
+public with sharing class testDataFactory {   
+
+    public static List<Transaction__c> insertTran(){
+        //ToDo: Ensure this method returns a list of uniquely named Transaction records
+        //  with all of the required fields populated.
+        List<Transaction__c> tranList = new List<Transaction__c>();
+        for (Integer i=0; i <declareConstants.NUMBER_OF_TRANSACTIONS ; i++) {
+            Transaction__c tran = new Transaction__c();
+            tran.Name = 'Test Transaction' + i;
+            tran.Total_Cost__c = i*10;
+            tran.Total_Discount__c = i+10;
+            tran.Transaction_Count__c = declareConstants.NUMBER_OF_TRAN_ITEMS_PER_TRAN;
+            tranList.add(tran);
+        }        
+        return tranList;
+    }
+    
+
+    public static  void insertTransItem(Set<id> trans){
+        List<Transaction_Item__c> transItemsList = new List<Transaction_Item__c>();
+        
+        for(Transaction__c tran : [select id,Transaction_Count__c from Transaction__c where id in :trans])
+        {
+            for(Integer i = 0; i <tran.Transaction_Count__c; i++) {
+                Transaction_Item__c tranItem = new Transaction_Item__c();
+                tranItem.Name = 'Test Transaction List' + i;
+                tranItem.Item_Cost__c = i * 10;
+                tranItem.Transaction__c = tran.Id;
+                transItemsList.add(tranItem);
+            }
+        }            
+        insert transItemsList;
+    }
+    public static List<Transaction__c> insertTestData(){     
+        List<Transaction__c> transList = testDataFactory.insertTran();
+        insert transList;                
+        testDataFactory.insertTransItem((new Map<id, sObject>(transList)).keySet());   
+        return transList;
+    }  
+}

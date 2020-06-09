@@ -1,0 +1,33 @@
+public class transactionWrapper {
+
+    public Keys keys {get;set;}
+    public Values values {get;set;}
+    
+    public class Keys {
+        public String TransactionID {get;set;}
+    }
+    
+    public class Values {
+        public Integer TotalCost {get;set;}
+        public Decimal TotalDiscount {get;set;}
+        public Date TransactionDate {get;set;}
+        public Integer TotalCount {get;set;}
+    }
+
+    public static TransactionWrapper parse(String json) {
+        return (TransactionWrapper) System.JSON.deserialize(json, TransactionWrapper.class);
+    }
+    
+    public static string serrilizeToJson(Transaction__c trans) {  
+        transactionWrapper tranWrap = new transactionWrapper();                        
+        tranWrap.keys = new transactionWrapper.Keys();
+        tranWrap.keys.TransactionID = trans.Id; 
+        tranWrap.values = new transactionWrapper.Values();
+        tranWrap.values.TotalCost = Integer.valueOf(trans.Total_Cost__c);
+        tranWrap.values.TotalDiscount = trans.Total_Discount__c;
+        tranWrap.values.TransactionDate = date.valueOf(trans.CreatedDate);
+        tranWrap.values.TotalCount = Integer.valueOf(trans.transaction_count__c);    
+        System.debug('***Transaction Payload' + JSON.serialize(tranWrap));
+        return JSON.serialize(tranWrap);
+    }
+}

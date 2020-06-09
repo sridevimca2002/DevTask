@@ -1,0 +1,35 @@
+public class TransactionListWrapperClass {   
+   	public Keys keys {get;set;}
+    public Values values {get;set;}    
+    
+    public class Keys {
+        public String TransactionItemID {get;set;}
+        
+    }
+    
+    public class Values {
+        public Integer ItemCost {get;set;}
+        public String ItemName {get;set;}
+    }
+    
+    public static string serializeToJson(List<Transaction_Item__c> items){
+        List<TransactionListWrapperClass> translistWrapperList = new List<TransactionListWrapperClass>();
+        for (Transaction_Item__c tranItem: items){                                  
+            TransactionListWrapperClass tranlistWrap = new TransactionListWrapperClass(); 
+            TransactionListWrapperClass.Keys tranKey = new TransactionListWrapperClass.Keys();
+            TransactionListWrapperClass.Values tranValue = new TransactionListWrapperClass.Values();
+            tranValue.ItemCost = Integer.valueOf(tranItem.Item_Cost__c);
+            tranValue.ItemName = tranItem.Name;                            
+            tranKey.TransactionItemID = tranItem.Id; 
+            tranlistWrap.values=tranValue;
+            tranlistWrap.keys=tranKey;                                                
+            translistWrapperList.add(tranlistWrap);        
+        }
+        System.debug('***TransactionList Payload' + JSON.serialize(translistWrapperList));
+        return JSON.serializePretty(translistWrapperList);
+    }
+    public static List<TransactionListWrapperClass> parse(String json) {
+        return (List<TransactionListWrapperClass>) System.JSON.deserialize(json, List<TransactionListWrapperClass>.class);
+    }
+
+}

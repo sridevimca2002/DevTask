@@ -1,0 +1,71 @@
+//This batch job will call the Queuable apex
+global class TransactionsBatch implements Database.Batchable<sObject>, Database.Stateful {     
+    Set<Id> transactionIds;      
+    global Set<Id> processedTrans; 
+    global integer tranCount;
+    
+    global TransactionsBatch(Set<Id> newList)
+    {        
+        transactionIds = newList;
+        System.debug('***TransactionsBatch constructor -> ' + transactionIds);        
+    }
+    global Database.QueryLocator start(database.BatchableContext con) {
+        //return Database.getQueryLocator(tranItemsList); 
+        return DataBase.getQueryLocator([SELECT Id,Total_Cost__c,Total_Discount__c,Transaction_Count__c,CreatedDate from transaction__c where Id IN :transactionIds]);
+    } 
+    global void Execute(database.BatchableContext con, list<Transaction__c> allTransToProcess) {                 
+        Map<id, List<Transaction_Item__c>> mapTranItemsSF = getTransactionsTobeQueued(allTransToProcess,processedTrans);        
+        System.enqueuejob(new restApiQueueHelper(mapTranItemsSF));                
+    }
+    global void finish(database.BatchableContext con) {
+        system.debug('transactions updated -> ' + processedTrans);
+    }
+    
+    global static Map<id, List<Transaction_Item__c>> getTransactionsTobeQueued(list<Transaction__c> allTransToProcess,
+                      Set<Id> processedTrans){
+        system.debug('allTransToProcess.size : ' + allTransToProcess.size());    
+        Set<Id> allTrans = (new Map<Id,SObject>(allTransToProcess)).keySet();
+        Map<id, List<Transaction_Item__c>> mapTranItemsSF = new Map<id, List<Transaction_Item__c>>();
+        for(Transaction_Item__c tranItemRec : [select Id,Transaction__c,Item_Cost__c,Name from Transaction_Item__c where Transaction__c IN :allTrans])
+        {
+            if (mapTranItemsSF.containsKey(tranItemRec.Transaction__c)) {
+                mapTranItemsSF.get(tranItemRec.Transaction__c).add(tranItemRec); 
+            } 
+            else
+            {
+                List<Transaction_Item__c> tranItemLst = new List<Transaction_Item__c>(); //Initialize list as no key is found before and first time we get key 
+                tranItemLst.add(tranItemRec);
+                mapTranItemsSF.put(tranItemRec.Transaction__c, tranItemLst);
+            }
+        }
+        for(Transaction__c trans : allTransToProcess)
+        {
+            system.debug('mapTranItemsSF.size()'+ mapTranItemsSF.size());
+            system.debug('trans.Transaction_Count__c'+ trans.Transaction_Count__c);
+            
+            if(mapTranItemsSF.get(trans.id).size() != trans.Transaction_Count__c) 
+            {              
+                 mapTranItemsSF.remove(trans.id);
+            }
+            if(processedTrans != null && processedTrans.contains(trans.id)) 
+            {
+                mapTranItemsSF.remove(trans.id);
+            }
+        }
+        system.debug('transactionJobQueueHelper -> mapTranItems size:' + mapTranItemsSF.size());        
+            
+        if(mapTranItemsSF.size() > 0)
+        {
+            system.debug('first time called -> already processed trans -> ' + processedTrans);
+            system.debug('first time called -> now processing trans -> ' + mapTranItemsSF.keySet());
+            
+            if(processedTrans == null)
+            {
+                processedTrans = new Set<id>(mapTranItemsSF.keySet());
+            }
+            else
+                processedTrans.addAll(mapTranItemsSF.keySet());                              
+        }
+        return mapTranItemsSF;
+    }
+}

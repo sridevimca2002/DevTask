@@ -1,0 +1,29 @@
+//The below queuable apex will give the Rest API callouts.
+public class restApiQueueHelper implements Queueable,Database.AllowsCallouts {
+    map<id,List<Transaction_Item__c>> mapSendTranItems;
+    Set<Id> postTranIds;
+    
+    public restApiQueueHelper (map<id,List<Transaction_Item__c>> input) {
+        mapSendTranItems = input;
+        postTranIds = input.KeySet();
+        system.debug('restApiQueueHelper -> constructor -> mapSendTranItems -> size' + mapSendTranItems.size());       
+    }
+    public void execute(QueueableContext qc){ 
+        Iterator<Id> iterator = postTranIds.iterator();
+        system.debug('inside queue, has next item :' + iterator.hasNext());
+        if(iterator.hasNext())
+        {
+            Id tranId = iterator.Next();
+           // if( !Test.isRunningTest()) {
+                HttpResponse resp = RestCallHelper.SendRequest('callout:test', TransactionListWrapperClass.serializeToJson(mapSendTranItems.get(tranId)));                                  
+                if (resp.getstatuscode() == 200) {   
+                    Transaction__c tran = [select Id,Total_Cost__c,Total_Discount__c,Transaction_Count__c,CreatedDate from Transaction__c where id =: tranId limit 1];                   
+                    resp = RestCallHelper.SendRequest('callout:test', transactionWrapper.serrilizeToJson(tran)); 
+                    system.debug(resp.getStatusCode());
+                } 
+           // }
+            mapSendTranItems.remove(tranId);
+            postTranIds.remove(tranId);            
+        }        
+    }
+}

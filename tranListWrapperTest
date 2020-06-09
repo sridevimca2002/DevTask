@@ -1,0 +1,27 @@
+@IsTest
+public class tranListWrapperTest {
+
+public static testMethod string testParse() {
+		String json = '['+
+		'{'+
+		'\"keys\": {'+
+		'\"TransactionItemID\": \"xxxxxxxxxxxxx\"'+
+		'},'+
+		'\"values\": {'+
+		'\"ItemCost\": \"200\",'+
+		'\"ItemName\": \"TI-01\"'+
+		'}'+
+		'},'+
+		'{'+
+		'\"keys\": {'+
+		'\"TransactionItemID\": \"xxxxxxxxxxxx\"'+
+		'},'+
+		'\"values\": {'+
+		'\"ItemCost\": \"300\",'+
+		'\"ItemName\": \"TI-02\"'+
+		'}'+
+		'}'+
+		']';
+    return json;
+	}
+}

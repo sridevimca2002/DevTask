@@ -1,0 +1,85 @@
+@isTest (SeeAllData=false)
+private class testTranItems {
+    @testSetup
+    static void SetupTestData() {
+        //testDataFactory.insertTestData();
+        //System.assert((Limits.getDMLRows() * 100 / Limits.getLimitDMLRows()) < 50);
+    }
+    @isTest static void testTranListPostCallOutSuccess() {
+        try{
+            Test.startTest();  
+            Test.setMock(HttpCalloutMock.class, new tranListMockCalloutSuccess());
+            List<Transaction__c> testData = testDataFactory.insertTestData();
+            
+            List<Transaction_Item__c> insertedTranItems =  [select Id,Transaction__c,Item_Cost__c,Name from Transaction_Item__c where
+                                                           Transaction__c in : (new Map<id,sObject>(testData).keySet())];
+             map<id,List<Transaction_Item__c>> mapSendTranItems= TransactionsBatch.getTransactionsTobeQueued(
+                 [SELECT Id,Total_Cost__c,Total_Discount__c,Transaction_Count__c,CreatedDate from transaction__c where Id IN :(new Map<Id,SObject>(insertedTranItems)).keySet()], 
+                 null);
+            restApiQueueHelper q1 = new restApiQueueHelper(mapSendTranItems);
+            q1.execute(null);
+            
+            Test.stopTest();
+            
+            HttpRequest req = new HttpRequest();
+            tranListMockCalloutSuccess mock = new tranListMockCalloutSuccess();
+            HttpResponse res = mock.respond(req);
+            
+            // Verify that the response received contains mocked values
+            String contentType = res.getHeader('Content-Type');        
+            String actualValue = res.getBody();        
+            String expectedValue = 'Tran List posted successfully';
+
+        }
+        catch(System.CalloutException e){           
+            throw e;     
+        }
+    }      
+    
+    @isTest static void testTranListPostCallOutFail() {
+        try{
+            // Set mock callout class 
+            Test.setMock(HttpCalloutMock.class, new tranListMockCalloutFailure()); 
+            Test.startTest();
+            List<Transaction__c> trans = [SELECT Id from Transaction__c where Name like 'Test Transaction%'];
+            Set<Id> transactionIds = new Set<Id>();
+            for (Transaction__c tran : trans) {            
+                transactionIds.add(tran.Id);            
+            }
+            List<Transaction_Item__c> insertedTranItems =  [select Id,Transaction__c,Item_Cost__c,Name from Transaction_Item__c];
+            transactionItemHandler.selectTranItems(insertedTranItems);
+            Test.stopTest();
+            
+            HttpRequest req = new HttpRequest();
+            tranListMockCalloutFailure mock = new tranListMockCalloutFailure();
+            HttpResponse res = mock.respond(req);
+            RestCallHelper restCall = new RestCallHelper();
+            
+            // Verify that the response received contains mocked values
+            String contentType = res.getHeader('Content-Type');       
+            String actualValue = res.getBody();        
+            String expectedValue = 'Tran List Items posted Unsuccessfully';
+            System.assertEquals(actualValue, expectedValue);
+            System.assertEquals(400, res.getStatusCode());
+        }
+        catch(System.CalloutException e){           
+            throw e;     
+        }
+    }      
+
+    @isTest static void testInvalidEndPoint() {       
+        try{        
+            // Set mock callout class 
+            Test.setMock(HttpCalloutMock.class, new tranListMockCalloutSuccess()); 
+            Test.startTest();                       
+            HttpResponse resp = RestCallHelper.SendRequest('callout:test', tranListWrapperTest.testParse());
+            Test.stopTest();
+                      
+        }
+        catch(System.CalloutException e){           
+            String expectedValue = 'Invalid endpoint, please check Remote site settings.';           
+          // System.assertEquals(e.getMessage(), expectedValue);           
+        }
+  
+  } 
+}

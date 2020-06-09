@@ -1,0 +1,13 @@
+//This transaction handler will execute the batches 
+public without sharing class transactionItemHandler {
+    public static void selectTranItems(List<Transaction_Item__c> newList){           
+        Set<Id> transactionIds = new Set<Id>();
+        system.debug('transactionItemHandler->selectTranItems ->  batch size->' + newList.size());
+        for(Transaction_Item__c item : newList)
+        {
+            transactionIds.add(item.Transaction__c);
+        }       
+        TransactionsBatch runBatch = new TransactionsBatch(transactionIds);
+        database.executeBatch(runBatch);    
+    }
+}

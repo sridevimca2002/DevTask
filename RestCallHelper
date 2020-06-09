@@ -1,0 +1,17 @@
+public class RestCallHelper {    
+    public static HttpResponse SendRequest(string url, string jsonPayload) { 
+        System.debug( 'API: calling : ' + url);
+        
+        Http http = new Http();
+        HttpRequest request = new HttpRequest();
+        request.setEndpoint(url);
+        request.setMethod('POST');
+        request.setHeader('Content-Type', 'application/json;charset=UTF-8');
+        request.setBody(jsonPayload);
+        system.debug('request payload for ' + url + ':' + jsonPayload);
+        
+        HttpResponse response = http.send(request);
+        System.debug( 'API: ' + url + 'Response Code: ' + response.getStatusCode() + ' and  Response status: ' + response.getStatus());
+        return response;        
+    }  
+}

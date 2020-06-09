@@ -1,0 +1,7 @@
+//This trigger will send the data to transaction handler 
+trigger transactionItemTrigger on Transaction_Item__c (after delete, after insert, after undelete, after update, before delete, before insert, before update) {    
+     if(Trigger.isAfter && Trigger.isInsert ){   
+        System.debug('***after insert' );
+        transactionItemHandler.selectTranItems(Trigger.new);         
+         }
+}
